@@ -1,12 +1,12 @@
 # ecd2iTat
 
-Convert disambiguations containing "explicit"/"clean" (and others) to proper tags so clients can display the 🅴/🅲 symbol
+Convert disambiguations containing "explicit"/"clean" (and others) keywords to proper tags so clients can display the 🅴/🅲 symbol
 
 ## What the hell is that name?
 
-(E)xplicit/(c)lean (d)isambiguation [to] (iT)unes (a)dvisory (t)ag*
+(E)xplicit/(c)lean (d)isambiguation [to] (iT)unes (a)dvisory (t)ag\*
 
-<small>* `itunesadvisory` (and `rtng` because why not)</small>
+<small>\* `itunesadvisory` (and `rtng` because why not)</small>
 
 ## Getting Started
 

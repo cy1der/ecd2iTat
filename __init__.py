@@ -20,6 +20,9 @@ def process_track(_, metadata, track, __):
     explicit_match = next((kw for kw in explicit_keywords if kw.lower() in disambiguation.strip().lower()), None)
     clean_match = next((kw for kw in clean_keywords if kw.lower() in disambiguation.strip().lower()), None)
 
+    stripped_disambiguation = disambiguation
+    stripped_album_disambiguation = album_disambiguation
+
     if explicit_match:
         metadata["itunesadvisory"] = iTunesAdvisory.EXPLICIT.value
 
@@ -27,8 +30,8 @@ def process_track(_, metadata, track, __):
             metadata["rtng"] = rtng.EXPLICIT.value
 
         if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            metadata["subtitle"] = strip_keyword_from_disambiguation(disambiguation, explicit_match)
-            metadata["musicbrainz_albumcomment"] = strip_keyword_from_disambiguation(album_disambiguation, explicit_match)
+            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, explicit_match)
+            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, explicit_match)
     elif clean_match:
         metadata["itunesadvisory"] = iTunesAdvisory.CLEAN.value
 
@@ -36,8 +39,11 @@ def process_track(_, metadata, track, __):
             metadata["rtng"] = rtng.CLEAN.value
 
         if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            metadata["subtitle"] = strip_keyword_from_disambiguation(disambiguation, clean_match)
-            metadata["musicbrainz_albumcomment"] = strip_keyword_from_disambiguation(album_disambiguation, clean_match)
+            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, clean_match)
+            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, clean_match)
+
+    metadata["~recordingcomment"] = stripped_disambiguation
+    metadata["~releasecomment"] = stripped_album_disambiguation
 
 def strip_keyword_from_disambiguation(disambiguation, keyword):
     # If the keyword is the entire disambiguation, return an empty string (e,g. "explicit" becomes "")
@@ -86,7 +92,7 @@ class ECD2ITatOptionsPage(OptionsPage):
         self.save_rtng_checkbox.setToolTip("Save the rtng tag")
 
         self.ecd2itat_strip_keyword_from_disambiguation_checkbox = QtWidgets.QCheckBox("Strip keywords from disambiguation", self)
-        self.ecd2itat_strip_keyword_from_disambiguation_checkbox.setToolTip("Try to remove the keyword from the disambiguation after processing, enable this if you don't want the keywords to be visible in the disambiguation and save it under \"subtitle\" (applies to albums too under \"musicbrainz_albumcomment\")")
+        self.ecd2itat_strip_keyword_from_disambiguation_checkbox.setToolTip("Try to remove the keyword from the disambiguation after processing, enable this if you don't want the keywords to be visible in the disambiguation (applies to albums too)")
 
         options_layout.addWidget(self.save_rtng_checkbox)
         options_layout.addWidget(self.ecd2itat_strip_keyword_from_disambiguation_checkbox)

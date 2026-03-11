@@ -5,7 +5,7 @@ from picard.config import BoolOption, TextOption, Option
 PLUGIN_NAME = "ecd2iTat"
 PLUGIN_AUTHOR = "cy1der"
 PLUGIN_DESCRIPTION = "Convert disambiguations containing \"explicit\"/\"clean\" (and others) keywords to proper tags so clients can display the 🅴/🅲 symbol"
-PLUGIN_VERSION = "1.0.0"
+PLUGIN_VERSION = "1.0.1"
 PLUGIN_API_VERSIONS = ["2.7", "2.8", "2.9", "2.10", "2.11", "2.12", "2.13"]
 PLUGIN_LICENSE = "GPL-2.0-or-later"
 PLUGIN_LICENSE_URL = "https://www.gnu.org/licenses/gpl-2.0.html"

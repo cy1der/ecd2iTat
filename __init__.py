@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 from .constants import *
 
 def process_track(_, metadata, track, __):    
-    disambiguation = track["recording"]["disambiguation"] if "disambiguation" in track["recording"] else ""
+    disambiguation = track["recording"]["disambiguation"] if "recording" in track and "disambiguation" in track["recording"] else track["disambiguation"] if "disambiguation" in track else ""
     album_disambiguation = metadata["~releasecomment"] if "~releasecomment" in metadata else ""
 
     explicit_keywords = config.setting["ecd2itat_explicit_keywords"] or DEFAULT_EXPLICIT_KEYWORDS

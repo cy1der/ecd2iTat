@@ -61,49 +61,49 @@ def strip_keyword_from_disambiguation(disambiguation, keyword):
     if disambiguation.strip().lower() == keyword.lower():
         return ""
 
+    # keyword is at the end with a preceding comma and space (e.g. "original mix, explicit" becomes "original mix")
+    if disambiguation.strip().lower().endswith(", " + keyword.lower()):
+        return disambiguation[:-len(keyword)-2].strip()
+
+    # keyword is at the end of the disambiguation preceded by a space (e.g. "original mix explicit" becomes "original mix")
+    if disambiguation.strip().lower().endswith(" " + keyword.lower()):
+        return disambiguation[:-len(keyword)].strip()
+
     # keyword is at the start of the disambiguation (e.g. "explicit, original mix" becomes "original mix")
     if disambiguation.strip().lower().startswith(keyword.lower() + ","):
         return disambiguation[len(keyword)+1:].strip()
-
-    # keyword is separated by a dash in the beginning of the disambiguation (e.g. "explicit - original mix" becomes "original mix")
-    if disambiguation.strip().lower().startswith(keyword.lower() + " -"):
-        return disambiguation[len(keyword)+2:].strip()
-
-    # keyword is separated by a dash in the end of the disambiguation (e.g. "original mix - explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith("- " + keyword.lower()):
-        return disambiguation[:-len(keyword)-2].strip()
-    
-    # keyword is separated by a dash in the middle of the disambiguation (e.g. "album version - explicit - remix" becomes "album version - remix")
-    if "-" + keyword.lower() + "-" in disambiguation.strip().lower():
-        return disambiguation.replace("-" + keyword + "-", "-").strip()
 
     # keyword is at the start of the disambiguation followed by a space (e.g. "explicit album version" becomes "album version")
     if disambiguation.strip().lower().startswith(keyword.lower() + " "):
         return disambiguation[len(keyword):].strip()
 
-    # keyword is at the end of the disambiguation preceded by a space (e.g. "album version explicit" becomes "album version")
-    if disambiguation.strip().lower().endswith(" " + keyword.lower()):
-        return disambiguation[:-len(keyword)].strip()
-
-    # keyword is a standalone word in the disambiguation (e.g. "original explicit mix" becomes "original mix")
-    if f" {keyword.lower()} " in disambiguation.strip().lower():
-        return disambiguation.replace(f" {keyword} ", " ").strip()
+    # keyword is separated by a dash in the beginning of the disambiguation (e.g. "explicit - original mix" becomes "original mix")
+    if disambiguation.strip().lower().startswith(keyword.lower() + " -"):
+        return disambiguation[len(keyword)+2:].strip()
 
     # keyword is at the end of the disambiguation (e.g. "original mix,explicit" becomes "original mix")
     if disambiguation.strip().lower().endswith("," + keyword.lower()):
         return disambiguation[:-len(keyword)-1].strip()
 
-    # keyword is at the end with a preceding comma and space (e.g. "original mix, explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith(", " + keyword.lower()):
+    # keyword is separated by a dash in the end of the disambiguation (e.g. "original mix - explicit" becomes "original mix")
+    if disambiguation.strip().lower().endswith("- " + keyword.lower()):
         return disambiguation[:-len(keyword)-2].strip()
+
+    # keyword is in between brackets in the disambiguation (e.g. "original mix (explicit)" becomes "original mix")
+    if f"({keyword.lower()})" in disambiguation.strip().lower():
+        return disambiguation.replace(f"({keyword})", "").strip()
+
+    # keyword is a standalone word in the disambiguation (e.g. "original explicit mix" becomes "original mix")
+    if f" {keyword.lower()} " in disambiguation.strip().lower():
+        return disambiguation.replace(f" {keyword} ", " ").strip()
 
     # keyword is in the middle of the disambiguation (e.g. "album version, explicit, remix" becomes "album version, remix")
     if "," + keyword.lower() + "," in disambiguation.strip().lower():
         return disambiguation.replace("," + keyword + ",", ",").strip()
 
-    # keyword is in between brackets in the disambiguation (e.g. "original mix (explicit)" becomes "original mix")
-    if f"({keyword.lower()})" in disambiguation.strip().lower():
-        return disambiguation.replace(f"({keyword})", "").strip()
+    # keyword is separated by a dash in the middle of the disambiguation (e.g. "album version - explicit - remix" becomes "album version - remix")
+    if " -" + keyword.lower() + "- " in disambiguation.strip().lower():
+        return disambiguation.replace(" -" + keyword + "- ", " - ").strip()
 
     # Return the disambiguation unchanged if the keyword is not found or cannot be stripped
     log.debug(f"Keyword '{keyword}' not found in disambiguation '{disambiguation}' for stripping")

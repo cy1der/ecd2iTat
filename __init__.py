@@ -5,48 +5,59 @@ from PyQt5 import QtWidgets
 
 from .constants import *
 
-def process_track(_, metadata, track, __):    
+def process_track(_, metadata, track, __):
     disambiguation = track["recording"]["disambiguation"] if "recording" in track and "disambiguation" in track["recording"] else track["disambiguation"] if "disambiguation" in track else ""
     album_disambiguation = metadata["~releasecomment"] if "~releasecomment" in metadata else ""
 
     explicit_keywords = config.setting["ecd2itat_explicit_keywords"] or DEFAULT_EXPLICIT_KEYWORDS
     if isinstance(explicit_keywords, str):
         explicit_keywords = [kw.strip() for kw in explicit_keywords.split(",")]
+    explicit_keywords = sorted((kw for kw in explicit_keywords if kw), key=len, reverse=True)
 
     clean_keywords = config.setting["ecd2itat_clean_keywords"] or DEFAULT_CLEAN_KEYWORDS
     if isinstance(clean_keywords, str):
         clean_keywords = [kw.strip() for kw in clean_keywords.split(",")]
+    clean_keywords = sorted((kw for kw in clean_keywords if kw), key=len, reverse=True)
 
-    explicit_match = next((kw for kw in explicit_keywords if kw.lower() in disambiguation.strip().lower()), None)
-    clean_match = next((kw for kw in clean_keywords if kw.lower() in disambiguation.strip().lower()), None)
+    disambiguation_lc = disambiguation.strip().lower()
+    album_disambiguation_lc = album_disambiguation.strip().lower()
+
+    explicit_match = next((kw for kw in explicit_keywords if kw.lower() in disambiguation_lc), None)
+    clean_match = next((kw for kw in clean_keywords if kw.lower() in disambiguation_lc), None)
+    album_explicit_match = next((kw for kw in explicit_keywords if kw.lower() in album_disambiguation_lc), None)
+    album_clean_match = next((kw for kw in clean_keywords if kw.lower() in album_disambiguation_lc), None)
 
     stripped_disambiguation = disambiguation
     stripped_album_disambiguation = album_disambiguation
 
-    if explicit_match:
+    if explicit_match or album_explicit_match:
         metadata["itunesadvisory"] = iTunesAdvisory.EXPLICIT.value
 
         if config.setting["ecd2itat_save_rtng"]:
             metadata["rtng"] = rtng.EXPLICIT.value
 
         if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, explicit_match)
-            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, explicit_match)
-    elif clean_match:
+            if explicit_match:
+                stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, explicit_match)
+            if album_explicit_match:
+                stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_explicit_match)
+    elif clean_match or album_clean_match:
         metadata["itunesadvisory"] = iTunesAdvisory.CLEAN.value
 
         if (config.setting["ecd2itat_save_rtng"]):
             metadata["rtng"] = rtng.CLEAN.value
 
         if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, clean_match)
-            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, clean_match)
+            if clean_match:
+                stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, clean_match)
+            if album_clean_match:
+                stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_clean_match)
 
     metadata["~recordingcomment"] = stripped_disambiguation
     metadata["~releasecomment"] = stripped_album_disambiguation
 
 def strip_keyword_from_disambiguation(disambiguation, keyword):
-    # If the keyword is the entire disambiguation, return an empty string (e,g. "explicit" becomes "")
+    # keyword is the entire disambiguation (e,g. "explicit" becomes "")
     if disambiguation.strip().lower() == keyword.lower():
         return ""
 
@@ -54,10 +65,34 @@ def strip_keyword_from_disambiguation(disambiguation, keyword):
     if disambiguation.strip().lower().startswith(keyword.lower() + ","):
         return disambiguation[len(keyword)+1:].strip()
 
+    # keyword is separated by a dash in the beginning of the disambiguation (e.g. "explicit - original mix" becomes "original mix")
+    if disambiguation.strip().lower().startswith(keyword.lower() + " -"):
+        return disambiguation[len(keyword)+2:].strip()
+
+    # keyword is separated by a dash in the end of the disambiguation (e.g. "original mix - explicit" becomes "original mix")
+    if disambiguation.strip().lower().endswith("- " + keyword.lower()):
+        return disambiguation[:-len(keyword)-2].strip()
+    
+    # keyword is separated by a dash in the middle of the disambiguation (e.g. "album version - explicit - remix" becomes "album version - remix")
+    if "-" + keyword.lower() + "-" in disambiguation.strip().lower():
+        return disambiguation.replace("-" + keyword + "-", "-").strip()
+
+    # keyword is at the start of the disambiguation followed by a space (e.g. "explicit album version" becomes "album version")
+    if disambiguation.strip().lower().startswith(keyword.lower() + " "):
+        return disambiguation[len(keyword):].strip()
+
+    # keyword is at the end of the disambiguation preceded by a space (e.g. "album version explicit" becomes "album version")
+    if disambiguation.strip().lower().endswith(" " + keyword.lower()):
+        return disambiguation[:-len(keyword)].strip()
+
+    # keyword is a standalone word in the disambiguation (e.g. "original explicit mix" becomes "original mix")
+    if f" {keyword.lower()} " in disambiguation.strip().lower():
+        return disambiguation.replace(f" {keyword} ", " ").strip()
+
     # keyword is at the end of the disambiguation (e.g. "original mix,explicit" becomes "original mix")
     if disambiguation.strip().lower().endswith("," + keyword.lower()):
         return disambiguation[:-len(keyword)-1].strip()
-    
+
     # keyword is at the end with a preceding comma and space (e.g. "original mix, explicit" becomes "original mix")
     if disambiguation.strip().lower().endswith(", " + keyword.lower()):
         return disambiguation[:-len(keyword)-2].strip()
@@ -65,6 +100,10 @@ def strip_keyword_from_disambiguation(disambiguation, keyword):
     # keyword is in the middle of the disambiguation (e.g. "album version, explicit, remix" becomes "album version, remix")
     if "," + keyword.lower() + "," in disambiguation.strip().lower():
         return disambiguation.replace("," + keyword + ",", ",").strip()
+
+    # keyword is in between brackets in the disambiguation (e.g. "original mix (explicit)" becomes "original mix")
+    if f"({keyword.lower()})" in disambiguation.strip().lower():
+        return disambiguation.replace(f"({keyword})", "").strip()
 
     # Return the disambiguation unchanged if the keyword is not found or cannot be stripped
     log.debug(f"Keyword '{keyword}' not found in disambiguation '{disambiguation}' for stripping")

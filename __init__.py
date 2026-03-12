@@ -2,6 +2,7 @@ from picard import config, log
 from picard.ui.options import OptionsPage, register_options_page
 from picard.metadata import register_track_metadata_processor
 from PyQt5 import QtWidgets
+import re
 
 from .constants import *
 
@@ -57,57 +58,41 @@ def process_track(_, metadata, track, __):
     metadata["~releasecomment"] = stripped_album_disambiguation
 
 def strip_keyword_from_disambiguation(disambiguation, keyword):
-    # keyword is the entire disambiguation (e,g. "explicit" becomes "")
-    if disambiguation.strip().lower() == keyword.lower():
+    disambiguation_stripped = disambiguation.strip()
+    keyword_stripped = keyword.strip()
+
+    if not disambiguation_stripped or not keyword_stripped:
+        return disambiguation
+
+    keyword_pattern = re.compile(rf"(?<!\\w){re.escape(keyword_stripped)}(?!\\w)", re.IGNORECASE)
+    if not keyword_pattern.search(disambiguation_stripped):
+        log.debug(f"Keyword '{keyword}' not found in disambiguation '{disambiguation}' for stripping")
+        return disambiguation
+
+    parts = re.split(r"\s*(,|\||-)\s*", disambiguation_stripped)
+    terms = parts[::2]
+    separators = parts[1::2]
+
+    cleaned_terms = []
+    for term in terms:
+        cleaned_term = keyword_pattern.sub("", term)
+        cleaned_term = re.sub(r"\(\s*\)", "", cleaned_term)
+        cleaned_term = re.sub(r"\s{2,}", " ", cleaned_term).strip()
+        cleaned_terms.append(cleaned_term)
+
+    non_empty_indexes = [i for i, term in enumerate(cleaned_terms) if term]
+    if not non_empty_indexes:
         return ""
 
-    # keyword is at the end with a preceding comma and space (e.g. "original mix, explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith(", " + keyword.lower()):
-        return disambiguation[:-len(keyword)-2].strip()
+    result = cleaned_terms[non_empty_indexes[0]]
+    for index in non_empty_indexes[1:]:
+        separator = separators[index - 1] if index - 1 < len(separators) else ","
+        if separator == ",":
+            result += f", {cleaned_terms[index]}"
+        else:
+            result += f" {separator} {cleaned_terms[index]}"
 
-    # keyword is at the end of the disambiguation preceded by a space (e.g. "original mix explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith(" " + keyword.lower()):
-        return disambiguation[:-len(keyword)].strip()
-
-    # keyword is at the start of the disambiguation (e.g. "explicit, original mix" becomes "original mix")
-    if disambiguation.strip().lower().startswith(keyword.lower() + ","):
-        return disambiguation[len(keyword)+1:].strip()
-
-    # keyword is at the start of the disambiguation followed by a space (e.g. "explicit album version" becomes "album version")
-    if disambiguation.strip().lower().startswith(keyword.lower() + " "):
-        return disambiguation[len(keyword):].strip()
-
-    # keyword is separated by a dash in the beginning of the disambiguation (e.g. "explicit - original mix" becomes "original mix")
-    if disambiguation.strip().lower().startswith(keyword.lower() + " -"):
-        return disambiguation[len(keyword)+2:].strip()
-
-    # keyword is at the end of the disambiguation (e.g. "original mix,explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith("," + keyword.lower()):
-        return disambiguation[:-len(keyword)-1].strip()
-
-    # keyword is separated by a dash in the end of the disambiguation (e.g. "original mix - explicit" becomes "original mix")
-    if disambiguation.strip().lower().endswith("- " + keyword.lower()):
-        return disambiguation[:-len(keyword)-2].strip()
-
-    # keyword is in between brackets in the disambiguation (e.g. "original mix (explicit)" becomes "original mix")
-    if f"({keyword.lower()})" in disambiguation.strip().lower():
-        return disambiguation.replace(f"({keyword})", "").strip()
-
-    # keyword is a standalone word in the disambiguation (e.g. "original explicit mix" becomes "original mix")
-    if f" {keyword.lower()} " in disambiguation.strip().lower():
-        return disambiguation.replace(f" {keyword} ", " ").strip()
-
-    # keyword is in the middle of the disambiguation (e.g. "album version, explicit, remix" becomes "album version, remix")
-    if "," + keyword.lower() + "," in disambiguation.strip().lower():
-        return disambiguation.replace("," + keyword + ",", ",").strip()
-
-    # keyword is separated by a dash in the middle of the disambiguation (e.g. "album version - explicit - remix" becomes "album version - remix")
-    if " -" + keyword.lower() + "- " in disambiguation.strip().lower():
-        return disambiguation.replace(" -" + keyword + "- ", " - ").strip()
-
-    # Return the disambiguation unchanged if the keyword is not found or cannot be stripped
-    log.debug(f"Keyword '{keyword}' not found in disambiguation '{disambiguation}' for stripping")
-    return disambiguation
+    return result
 
 class ECD2ITatOptionsPage(OptionsPage):
     NAME = "ecd2itat"

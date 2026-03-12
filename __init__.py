@@ -31,28 +31,33 @@ def process_track(_, metadata, track, __):
     stripped_disambiguation = disambiguation
     stripped_album_disambiguation = album_disambiguation
 
-    if explicit_match or album_explicit_match:
+    if explicit_match:
         metadata["itunesadvisory"] = iTunesAdvisory.EXPLICIT.value
-
         if config.setting["ecd2itat_save_rtng"]:
             metadata["rtng"] = rtng.EXPLICIT.value
-
-        if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            if explicit_match:
-                stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, explicit_match)
-            if album_explicit_match:
-                stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_explicit_match)
-    elif clean_match or album_clean_match:
+    elif clean_match:
         metadata["itunesadvisory"] = iTunesAdvisory.CLEAN.value
-
-        if (config.setting["ecd2itat_save_rtng"]):
+        if config.setting["ecd2itat_save_rtng"]:
+            metadata["rtng"] = rtng.CLEAN.value
+    elif album_explicit_match:
+        metadata["itunesadvisory"] = iTunesAdvisory.EXPLICIT.value
+        if config.setting["ecd2itat_save_rtng"]:
+            metadata["rtng"] = rtng.EXPLICIT.value
+    elif album_clean_match:
+        metadata["itunesadvisory"] = iTunesAdvisory.CLEAN.value
+        if config.setting["ecd2itat_save_rtng"]:
             metadata["rtng"] = rtng.CLEAN.value
 
-        if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
-            if clean_match:
-                stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, clean_match)
-            if album_clean_match:
-                stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_clean_match)
+    if config.setting["ecd2itat_strip_keyword_from_disambiguation"]:
+        if explicit_match:
+            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, explicit_match)
+        elif clean_match:
+            stripped_disambiguation = strip_keyword_from_disambiguation(disambiguation, clean_match)
+
+        if album_explicit_match:
+            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_explicit_match)
+        elif album_clean_match:
+            stripped_album_disambiguation = strip_keyword_from_disambiguation(album_disambiguation, album_clean_match)
 
     metadata["~recordingcomment"] = stripped_disambiguation
     metadata["~releasecomment"] = stripped_album_disambiguation

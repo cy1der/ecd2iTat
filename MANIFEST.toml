@@ -1,0 +1,11 @@
+uuid = "fdd0ec65-8c3e-4f40-bc0f-9bc88cc397e2"
+name = "ecd2iTat"
+description = "Convert disambiguations containing \"explicit\"/\"clean\" (and others) keywords to proper tags so clients can display the 🅴/🅲 symbol"
+version = "2.0.0"
+api = ["3.0"]
+authors = ["cy1der"]
+license = "GPL-2.0-or-later"
+license_url = "https://www.gnu.org/licenses/gpl-2.0.html"
+homepage = "https://github.com/cy1der/ecd2iTat"
+report_bugs_to = "https://github.com/cy1der/ecd2iTat/issues"
+categories = ["metadata"]

@@ -1,4 +1,5 @@
 import ast
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, cast
@@ -26,11 +27,11 @@ def _load_strip_keyword_function():
     )
     ast.fix_missing_locations(isolated_module)
 
-    namespace: dict[str, object] = {
-        "log": SimpleNamespace(debug=lambda *args, **kwargs: None),
-    }
+    namespace: dict[str, object] = {}
     exec(compile(isolated_module, str(module_path), "exec"), namespace)
-    return cast(Callable[[str, str], str], namespace["strip_keyword_from_disambiguation"])
+
+    api = SimpleNamespace(logger=SimpleNamespace(debug=lambda *args, **kwargs: None))
+    return cast(Callable[[str, str], str], partial(namespace["strip_keyword_from_disambiguation"], api))
 
 
 strip_keyword_from_disambiguation = _load_strip_keyword_function()
@@ -67,6 +68,18 @@ def test_strip_keyword_is_case_insensitive():
 def test_strip_keyword_returns_original_when_not_found():
     original = "original mix, clean"
     assert strip_keyword_from_disambiguation(original, "explicit") == original
+
+
+@pytest.mark.parametrize(
+    "disambiguation, keyword",
+    [
+        ("explicitly remastered", "explicit"),
+        ("unclean mix", "clean"),
+        ("cleanest edit", "clean"),
+    ],
+)
+def test_strip_keyword_ignores_partial_word_matches(disambiguation, keyword):
+    assert strip_keyword_from_disambiguation(disambiguation, keyword) == disambiguation
 
 
 @pytest.mark.parametrize(
